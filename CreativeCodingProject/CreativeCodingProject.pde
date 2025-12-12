@@ -1,5 +1,5 @@
-// FPL Creative Coding Sketch - FINAL FIX
-// Fixes: Remove GW0s, better spacing, force rank variation visibility
+// FPL Creative Coding Sketch
+
 
 Table table;
 
@@ -22,7 +22,7 @@ void setup() {
   size(1200, 700);
   smooth();
   
-  table = loadTable("FPLDataTrackingSheet.csv", "header"); 
+  table = loadTable("FPLDataTracking.csv", "header"); 
   
   // Filter out invalid rows (GW0 or missing data)
   for (int i = 0; i < table.getRowCount(); i++) {
@@ -121,7 +121,7 @@ void draw() {
   strokeWeight(2);
   line(x_margin, ground_y, width - x_margin, ground_y); 
   
-  // Calculate spacing - MORE space between trees, stop before legend
+  // Calculate spacing 
   float legendStartX = width - 300;
   float usable_width = legendStartX - x_margin - 40;  // Extra margin before legend
   float step_size = usable_width / num_gameweeks;
@@ -195,7 +195,7 @@ void draw() {
   text(nfc(lowest_rank), x_margin - 20, rank_line_y_bottom - 15);
   text("Worst", x_margin - 20, rank_line_y_bottom);
   
-  // Draw the Forest - ONLY VALID DATA
+  // Draw the Forest
   colorMode(HSB, 255);
   
   for(int i = 0; i < num_gameweeks; i++){
@@ -236,7 +236,7 @@ void draw() {
     text(pointsEarned, treeX, ground_y - trunkHeight);
     colorMode(HSB, 255);
     
-    // Fallen fruit - MORE VISIBLE
+    // Fallen fruit
     if (benchWasted > 0) {
       colorMode(RGB, 255);
       fill(180, 100, 120);  // More visible pink/red color
@@ -324,7 +324,7 @@ void drawLegend() {
   
   y += lineHeight * 2.2;
   
-  // Fallen Fruit - UPDATED COLOR
+  // Fallen Fruit
   textAlign(LEFT, TOP);
   textSize(13);
   fill(70);
