@@ -24,7 +24,7 @@ void setup() {
   
   table = loadTable("FPLDataTracking.csv", "header"); 
   
-  // Filter out invalid rows (GW0 or missing data)
+  
   for (int i = 0; i < table.getRowCount(); i++) {
     TableRow row = table.getRow(i);
     int gameweek = row.getInt("Gameweek");
@@ -71,7 +71,6 @@ void setup() {
   int range = lowest_rank - highest_rank;
   
   if (range == 0) {
-    // All ranks are the same - add artificial range
     println("Warning: All ranks are identical!");
     highest_rank = max(1, highest_rank - 5000);
     lowest_rank = lowest_rank + 5000;
