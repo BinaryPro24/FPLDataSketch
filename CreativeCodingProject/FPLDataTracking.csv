@@ -1,0 +1,20 @@
+Gameweek,PointsEarned,AveragePoints,TransfersMade,PointsFromCaptain,CaptainChoice,BenchPointsWasted,TransferCost,ChipsUsed,TransferSuccess,PointsChange,OverallRank,EmotionRating,RankChange,CaptainSuccess,,,,,,
+1,35,54,0,2,"Gyokeres, Striker, ARS",19,0,N/A,N/A,N/A,9,2,N/A,5.71%,,,,,,
+2,67,51,0,24,"Gyokeres, Striker, ARS",15,0,N/A,N/A,Increased,5,4,P,35.82%,,,,,Transfer Cost: Making more transfers than what you have,Chips (2x a season)
+3,30,48,2,2,"Gyokeres, Striker, ARS",14,0,N/A,3 points gained,Decreased,8,1,N,6.67%,,,,,I record the captains points when doubled.,Wildcard
+4,62,63,0,12,"Gyokeres, Striker, ARS",6,0,Wildcard,N/A,Increased,7,3,P,19.35%,,,,,"Rank Change (P=Positive, N = Negative)",Bench Boost
+5,53,42,1,12,"Mateta, Striker, CPFC",10,0,N/A,4 points gained,Decreased,6,2,P,22.64%,,,,,Captain Success: Ratio between Captain Points to Total Points ,Free Hit
+6,45,46,2,4,"Gyokeres, Striker, ARS",2,-4,N/A,2 points gained,Decreased,6,1,N,8.89%,,,,,Formula: CaptainSucess = CaptainPoints/TotalPoints * 100,Triple Captain
+7,69,60,1,4,"Gyokeres, Striker, ARS",12,0,N/A,6 points gained,Increased,5,5,P,5.80%,,,,,Overall Rank will be simplifed to the nearest million,
+8,59,56,0,8,"Semenyo, Midfielder, AFCB",14,0,N/A,N/A,Decreased,5,3,P,13.56%,,,,,Transfer Success: Did the new player outperform the transferred out player?,
+9,36,46,2,4,"Haaland, Striker, MCI",4,0,N/A,3 points lost,Decreased,6,1,N,11.11%,,,,,,AveragePoints: Average score of all FPL players each gameweek
+10,76,65,1,26,"Haaland, Striker, MCI",4,0,N/A,2 points gained,Increased,5,5,P,34.21%,,,,,,
+11,50,38,0,8,"Haaland, Striker, MCI",3,0,N/A,N/A,Decreased,4,4,P,16.00%,,,,,,
+12,40,39,1,4,"Haaland, Striker, MCI",3,0,N/A,5 points gained,Decreased,4,3,P,10.00%,,,,,"Title of the FPL Season: ""A Forest of Gameweeks""",
+,,,,,,,,,,,,,,,,,,,BenchPointsWasted -> tree thorns or tangles,
+,,,,,,,,,,,,,,,,,,,Captain -> special/clear symbol,
+,,,,,,,,,,,,,,,,,,,Gameweek -> X-position of each tree in the forest,
+,,,,,,,,,,,Total FPL Players,,,,,,,,TransferSuccess -> leaf brightness,
+,,,,,,,,,,,"12,493,076",,,,,,,,PointsChange -> wider or sparse tree length,
+,,,,,,,,,,,,,,,,,,,PointsFromCaptain -> symbol on tree,
+,,,,,,,,,,,,,,,,,,,CaptainChoice -> particular shape on tree,
