@@ -3,4 +3,6 @@ The following sketch shows how my FPL team performance has looked like each week
 
 More information of the metrics is on the sketch image!
 
+<img width="2294" height="1502" alt="image" src="https://github.com/user-attachments/assets/639c4337-f18e-4e15-9785-52a4e76980ee" />
+
 Thanks for reading!
