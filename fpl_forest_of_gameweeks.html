@@ -1,0 +1,553 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>A Forest of Gameweeks</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,600;1,600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.min.js"></script>
+<style>
+  :root{
+    --sky-deep:#0b1420;
+    --card-bg:rgba(12,20,32,0.92);
+    --card-border:#f2a65a;
+    --ink:#f4f1ea;
+    --ink-dim:#9fb0c2;
+    --amber:#f2a65a;
+    --river:#5fcdde;
+    --good:#4ade80;
+    --bad:#f87171;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--sky-deep);
+    color:var(--ink);
+    font-family:'IBM Plex Mono', monospace;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    padding:28px 16px 40px;
+  }
+  header{
+    text-align:center;
+    max-width:900px;
+    margin-bottom:6px;
+  }
+  h1{
+    font-family:'Fraunces', serif;
+    font-style:italic;
+    font-weight:600;
+    font-size:clamp(28px,4.5vw,44px);
+    margin:0 0 6px;
+    letter-spacing:0.3px;
+  }
+  .stats{
+    font-size:12px;
+    letter-spacing:1.2px;
+    text-transform:uppercase;
+    color:var(--ink-dim);
+  }
+  .stats b{color:var(--amber); font-weight:600;}
+  #controls{
+    display:flex;
+    flex-wrap:wrap;
+    gap:8px;
+    justify-content:center;
+    margin:18px 0 14px;
+  }
+  button{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:11px;
+    letter-spacing:0.8px;
+    text-transform:uppercase;
+    background:rgba(255,255,255,0.06);
+    color:var(--ink);
+    border:1px solid rgba(255,255,255,0.18);
+    border-radius:20px;
+    padding:8px 16px;
+    cursor:pointer;
+    transition:background 0.15s, border-color 0.15s;
+  }
+  button:hover{background:rgba(255,255,255,0.14);}
+  button.active{background:var(--amber); color:#1b1206; border-color:var(--amber); font-weight:600;}
+  button:focus-visible{outline:2px solid var(--river); outline-offset:2px;}
+  #replay-btn{border-color:var(--river);}
+  #canvas-wrap{
+    max-width:100%;
+    overflow-x:auto;
+    border-radius:10px;
+    box-shadow:0 20px 60px rgba(0,0,0,0.5);
+  }
+  .scroll-hint{
+    font-size:10px;
+    color:var(--ink-dim);
+    letter-spacing:1px;
+    text-transform:uppercase;
+    margin-top:8px;
+    display:none;
+  }
+  @media (max-width:1000px){
+    .scroll-hint{display:block;}
+  }
+  #tooltip{
+    position:fixed;
+    z-index:20;
+    background:var(--card-bg);
+    border:1px solid var(--card-border);
+    border-radius:8px;
+    padding:12px 14px;
+    font-size:12px;
+    line-height:1.6;
+    min-width:220px;
+    pointer-events:none;
+    backdrop-filter:blur(4px);
+  }
+  #tooltip.hidden{display:none;}
+  .tt-gw{
+    font-family:'Fraunces', serif;
+    font-style:italic;
+    font-size:16px;
+    color:var(--amber);
+    margin-bottom:6px;
+  }
+  .tt-row{display:flex; justify-content:space-between; gap:10px;}
+  .tt-row span:first-child{color:var(--ink-dim);}
+  .tt-row.chip b{color:#f4c95d;}
+  .tt-sub{color:var(--ink-dim); font-size:11px;}
+  #legend{
+    margin-top:22px;
+    max-width:920px;
+    width:100%;
+    background:var(--card-bg);
+    border:1px solid rgba(255,255,255,0.12);
+    border-radius:10px;
+    padding:16px 20px;
+    display:grid;
+    grid-template-columns:repeat(auto-fit, minmax(200px,1fr));
+    gap:12px 24px;
+    font-size:12px;
+  }
+  .legend-item{display:flex; align-items:center; gap:8px;}
+  .legend-title{
+    grid-column:1/-1;
+    font-family:'Fraunces', serif;
+    font-style:italic;
+    font-size:15px;
+    color:var(--amber);
+    margin-bottom:2px;
+  }
+  .swatch{width:14px; height:14px; border-radius:3px; flex:none;}
+  .swatch.round{border-radius:50%;}
+  .grad{width:44px; height:10px; border-radius:5px; flex:none;
+    background:linear-gradient(90deg,#b2443c,#d6963c,#469d5e);}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>A Forest of Gameweeks</h1>
+  <div class="stats" id="subtitle-stats">loading season…</div>
+</header>
+
+<div id="controls">
+  <button class="filter-btn active" data-filter="all">All 38 weeks</button>
+  <button class="filter-btn" data-filter="chips">Chip weeks</button>
+  <button class="filter-btn" data-filter="hits">Hits taken</button>
+  <button class="filter-btn" data-filter="highmood">High mood (4–5)</button>
+  <button class="filter-btn" data-filter="lowmood">Low mood (1–2)</button>
+  <button id="replay-btn">↻ Replay season</button>
+</div>
+
+<div id="canvas-wrap"></div>
+<div class="scroll-hint">← scroll to see the full season →</div>
+
+<div id="legend">
+  <div class="legend-title">How to read the forest</div>
+  <div class="legend-item"><span class="swatch" style="background:#4a3324;border-radius:2px;height:20px;width:8px;"></span> Trunk height = points earned · width = transfers made</div>
+  <div class="legend-item"><span class="grad"></span> Canopy colour = mood that week (red → amber → green)</div>
+  <div class="legend-item"><span class="swatch round" style="background:#e2673f;"></span> Fallen fruit = bench points wasted</div>
+  <div class="legend-item"><span class="swatch round" style="background:#4ade80;"></span><span class="swatch round" style="background:#f87171;margin-left:-4px;"></span> Glow at roots = net transfer points (green gain / red loss)</div>
+  <div class="legend-item"><span class="swatch round" style="background:#f4c95d;"></span> Gold halo = chip played that week</div>
+  <div class="legend-item"><span class="swatch round" style="background:#5fcdde;"></span> River = overall rank, flowing left to right</div>
+  <div class="legend-item">▲▼ above canopy = rank moved up / down that week</div>
+  <div class="legend-item">Hover any tree for the full gameweek breakdown</div>
+</div>
+
+<div id="tooltip" class="hidden"></div>
+
+<script>
+const seasonData = [{"Gameweek": 1, "PointsEarned": 35, "AveragePoints": 54, "TransfersMade": 0, "PointsFromCaptain": 2.0, "CaptainChoice": "Gyokeres, Striker, ARS", "BenchPointsWasted": 19, "TransferCost": 0, "ChipsUsed": null, "TransferSuccess": 0.0, "PointsChange": "0", "OverallRank (millions)": 9, "EmotionRating": 2.0, "RankChange": null, "CaptainSuccess": 5.71, "CaptainName": "Gyokeres", "CaptainPosition": "Striker", "CaptainClub": "ARS", "PointsChangeDirection": "Flat", "RankChangeDirection": null}, {"Gameweek": 2, "PointsEarned": 67, "AveragePoints": 51, "TransfersMade": 0, "PointsFromCaptain": 24.0, "CaptainChoice": "Gyokeres, Striker, ARS", "BenchPointsWasted": 15, "TransferCost": 0, "ChipsUsed": null, "TransferSuccess": 0.0, "PointsChange": "Increased", "OverallRank (millions)": 5, "EmotionRating": 4.0, "RankChange": "P", "CaptainSuccess": 35.82, "CaptainName": "Gyokeres", "CaptainPosition": "Striker", "CaptainClub": "ARS", "PointsChangeDirection": "Increased", "RankChangeDirection": "Positive"}, {"Gameweek": 3, "PointsEarned": 30, "AveragePoints": 48, "TransfersMade": 2, "PointsFromCaptain": 2.0, "CaptainChoice": "Gyokeres, Striker, ARS", "BenchPointsWasted": 14, "TransferCost": 0, "ChipsUsed": null, "TransferSuccess": 3.0, "PointsChange": "Decreased", "OverallRank (millions)": 8, "EmotionRating": 1.0, "RankChange": "N", "CaptainSuccess": 6.67, "CaptainName": "Gyokeres", "CaptainPosition": "Striker", "CaptainClub": "ARS", "PointsChangeDirection": "Decreased", "RankChangeDirection": "Negative"}, {"Gameweek": 4, "PointsEarned": 62, "AveragePoints": 63, "TransfersMade": 0, "PointsFromCaptain": 12.0, "CaptainChoice": "Gyokeres, Striker, ARS", "BenchPointsWasted": 6, "TransferCost": 0, "ChipsUsed": "Wildcard", "TransferSuccess": 0.0, "PointsChange": "Increased", "OverallRank (millions)": 7, "EmotionRating": 3.0, "RankChange": "P", "CaptainSuccess": 19.35, "CaptainName": "Gyokeres", "CaptainPosition": "Striker", "CaptainClub": "ARS", "PointsChangeDirection": "Increased", "RankChangeDirection": "Positive"}, {"Gameweek": 5, "PointsEarned": 53, "AveragePoints": 42, "TransfersMade": 1, "PointsFromCaptain": 12.0, "CaptainChoice": "Mateta, Striker, CPFC", "BenchPointsWasted": 10, "TransferCost": 0, "ChipsUsed": null, "TransferSuccess": 4.0, "PointsChange": "Decreased", "OverallRank (millions)": 6, "EmotionRating": 2.0, "RankChange": "P", "CaptainSuccess": 22.64, "CaptainName": "Mateta", "CaptainPosition": "Striker", "CaptainClub": "CPFC", "PointsChangeDirection": "Decreased", "RankChangeDirection": "Positive"}, {"Gameweek": 6, "PointsEarned": 45, "AveragePoints": 46, "TransfersMade": 2, "PointsFromCaptain": 4.0, "CaptainChoice": "Gyokeres, Striker, ARS", "BenchPointsWasted": 2, "TransferCost": -4, "ChipsUsed": null, "TransferSuccess": 2.0, "PointsChange": "Decreased", "OverallRank (millions)": 6, "EmotionRating": 1.0, "RankChange": "N", "CaptainSuccess": 8.89, "CaptainName": "Gyokeres", "CaptainPosition": "Striker", "CaptainClub": "ARS", "PointsChangeDirection": "Decreased", "RankChangeDirection": "Negative"}, {"Gameweek": 7, "PointsEarned": 69, "AveragePoints": 60, "TransfersMade": 1, "PointsFromCaptain": 4.0, "CaptainChoice": "Gyokeres, Striker, ARS", "BenchPointsWasted": 12, "TransferCost": 0, "ChipsUsed": null, "TransferSuccess": 6.0, "PointsChange": "Increased", "OverallRank (millions)": 5, "EmotionRating": 5.0, "RankChange": "P", "CaptainSuccess": 5.8, "CaptainName": "Gyokeres", "CaptainPosition": "Striker", "CaptainClub": "ARS", "PointsChangeDirection": "Increased", "RankChangeDirection": "Positive"}, {"Gameweek": 8, "PointsEarned": 59, "AveragePoints": 56, "TransfersMade": 0, "PointsFromCaptain": 8.0, "CaptainChoice": "Semenyo, Midfielder, AFCB", "BenchPointsWasted": 14, "TransferCost": 0, "ChipsUsed": null, "TransferSuccess": 0.0, "PointsChange": "Decreased", "OverallRank (millions)": 5, "EmotionRating": 3.0, "RankChange": "P", "CaptainSuccess": 13.56, "CaptainName": "Semenyo", "CaptainPosition": "Midfielder", "CaptainClub": "AFCB", "PointsChangeDirection": "Decreased", "RankChangeDirection": "Positive"}, {"Gameweek": 9, "PointsEarned": 36, "AveragePoints": 46, "TransfersMade": 2, "PointsFromCaptain": 4.0, "CaptainChoice": "Haaland, Striker, MCI", "BenchPointsWasted": 4, "TransferCost": 0, "ChipsUsed": null, "TransferSuccess": -3.0, "PointsChange": "Decreased", "OverallRank (millions)": 6, "EmotionRating": 1.0, "RankChange": "N", "CaptainSuccess": 11.11, "CaptainName": "Haaland", "CaptainPosition": "Striker", "CaptainClub": "MCI", "PointsChangeDirection": "Decreased", "RankChangeDirection": "Negative"}, {"Gameweek": 10, "PointsEarned": 76, "AveragePoints": 65, "TransfersMade": 1, "PointsFromCaptain": 26.0, "CaptainChoice": "Haaland, Striker, MCI", "BenchPointsWasted": 4, "TransferCost": 0, "ChipsUsed": null, "TransferSuccess": 2.0, "PointsChange": "Increased", "OverallRank (millions)": 5, "EmotionRating": 5.0, "RankChange": "P", "CaptainSuccess": 34.21, "CaptainName": "Haaland", "CaptainPosition": "Striker", "CaptainClub": "MCI", "PointsChangeDirection": "Increased", "RankChangeDirection": "Positive"}, {"Gameweek": 11, "PointsEarned": 50, "AveragePoints": 38, "TransfersMade": 0, "PointsFromCaptain": 8.0, "CaptainChoice": "Haaland, Striker, MCI", "BenchPointsWasted": 3, "TransferCost": 0, "ChipsUsed": null, "TransferSuccess": 0.0, "PointsChange": "Decreased", "OverallRank (millions)": 5, "EmotionRating": 4.0, "RankChange": "P", "CaptainSuccess": 16.0, "CaptainName": "Haaland", "CaptainPosition": "Striker", "CaptainClub": "MCI", "PointsChangeDirection": "Decreased", "RankChangeDirection": "Positive"}, {"Gameweek": 12, "PointsEarned": 40, "AveragePoints": 39, "TransfersMade": 1, "PointsFromCaptain": 4.0, "CaptainChoice": "Haaland, Striker, MCI", "BenchPointsWasted": 3, "TransferCost": 0, "ChipsUsed": null, "TransferSuccess": 5.0, "PointsChange": "Decreased", "OverallRank (millions)": 5, "EmotionRating": 3.0, "RankChange": "P", "CaptainSuccess": 10.0, "CaptainName": "Haaland", "CaptainPosition": "Striker", "CaptainClub": "MCI", "PointsChangeDirection": "Decreased", "RankChangeDirection": "Positive"}, {"Gameweek": 13, "PointsEarned": 40, "AveragePoints": 35, "TransfersMade": 2, "PointsFromCaptain": 4.0, "CaptainChoice": "Haaland, Striker, MCI", "BenchPointsWasted": 5, "TransferCost": 0, "ChipsUsed": null, "TransferSuccess": 5.0, "PointsChange": "0", "OverallRank (millions)": 4, "EmotionRating": 3.0, "RankChange": "P", "CaptainSuccess": 10.0, "CaptainName": "Haaland", "CaptainPosition": "Striker", "CaptainClub": "MCI", "PointsChangeDirection": "Flat", "RankChangeDirection": "Positive"}, {"Gameweek": 14, "PointsEarned": 59, "AveragePoints": 58, "TransfersMade": 1, "PointsFromCaptain": 10.0, "CaptainChoice": "Woltemade, Striker, NUFC", "BenchPointsWasted": 13, "TransferCost": 0, "ChipsUsed": null, "TransferSuccess": 1.0, "PointsChange": "Increased", "OverallRank (millions)": 4, "EmotionRating": 4.0, "RankChange": "P", "CaptainSuccess": 16.95, "CaptainName": "Woltemade", "CaptainPosition": "Striker", "CaptainClub": "NUFC", "PointsChangeDirection": "Increased", "RankChangeDirection": "Positive"}, {"Gameweek": 15, "PointsEarned": 50, "AveragePoints": 49, "TransfersMade": 0, "PointsFromCaptain": 4.0, "CaptainChoice": "Woltemade, Striker, NUFC", "BenchPointsWasted": 5, "TransferCost": 0, "ChipsUsed": null, "TransferSuccess": 0.0, "PointsChange": "Decreased", "OverallRank (millions)": 4, "EmotionRating": 5.0, "RankChange": "P", "CaptainSuccess": 8.0, "CaptainName": "Woltemade", "CaptainPosition": "Striker", "CaptainClub": "NUFC", "PointsChangeDirection": "Decreased", "RankChangeDirection": "Positive"}, {"Gameweek": 16, "PointsEarned": 71, "AveragePoints": 60, "TransfersMade": 5, "PointsFromCaptain": 22.0, "CaptainChoice": "Saka, Midfielder, ARS", "BenchPointsWasted": 2, "TransferCost": 0, "ChipsUsed": null, "TransferSuccess": 13.0, "PointsChange": "Increased", "OverallRank (millions)": 4, "EmotionRating": 5.0, "RankChange": "P", "CaptainSuccess": 30.99, "CaptainName": "Saka", "CaptainPosition": "Midfielder", "CaptainClub": "ARS", "PointsChangeDirection": "Increased", "RankChangeDirection": "Positive"}, {"Gameweek": 17, "PointsEarned": 101, "AveragePoints": 66, "TransfersMade": 2, "PointsFromCaptain": 48.0, "CaptainChoice": "Haaland, Striker, MCI", "BenchPointsWasted": 8, "TransferCost": -4, "ChipsUsed": "Triple Captain", "TransferSuccess": 11.0, "PointsChange": "Increased", "OverallRank (millions)": 3, "EmotionRating": 5.0, "RankChange": "P", "CaptainSuccess": 47.52, "CaptainName": "Haaland", "CaptainPosition": "Striker", "CaptainClub": "MCI", "PointsChangeDirection": "Increased", "RankChangeDirection": "Positive"}, {"Gameweek": 18, "PointsEarned": 61, "AveragePoints": 44, "TransfersMade": 2, "PointsFromCaptain": 4.0, "CaptainChoice": "Haaland, Striker, MCI", "BenchPointsWasted": 0, "TransferCost": -4, "ChipsUsed": "Bench Boost", "TransferSuccess": 7.0, "PointsChange": "Decreased", "OverallRank (millions)": 2, "EmotionRating": 4.0, "RankChange": "P", "CaptainSuccess": 6.56, "CaptainName": "Haaland", "CaptainPosition": "Striker", "CaptainClub": "MCI", "PointsChangeDirection": "Decreased", "RankChangeDirection": "Positive"}, {"Gameweek": 19, "PointsEarned": 43, "AveragePoints": 40, "TransfersMade": 0, "PointsFromCaptain": 4.0, "CaptainChoice": "Haaland, Striker, MCI", "BenchPointsWasted": 21, "TransferCost": 0, "ChipsUsed": "Free Hit", "TransferSuccess": -6.0, "PointsChange": "Decreased", "OverallRank (millions)": 2, "EmotionRating": 2.0, "RankChange": "P", "CaptainSuccess": 9.3, "CaptainName": "Haaland", "CaptainPosition": "Striker", "CaptainClub": "MCI", "PointsChangeDirection": "Decreased", "RankChangeDirection": "Positive"}, {"Gameweek": 20, "PointsEarned": 33, "AveragePoints": 42, "TransfersMade": 1, "PointsFromCaptain": 4.0, "CaptainChoice": "Haaland, Striker, MCI", "BenchPointsWasted": 7, "TransferCost": 0, "ChipsUsed": null, "TransferSuccess": -13.0, "PointsChange": "Decreased", "OverallRank (millions)": 3, "EmotionRating": 1.0, "RankChange": "N", "CaptainSuccess": 12.12, "CaptainName": "Haaland", "CaptainPosition": "Striker", "CaptainClub": "MCI", "PointsChangeDirection": "Decreased", "RankChangeDirection": "Negative"}, {"Gameweek": 21, "PointsEarned": 48, "AveragePoints": 48, "TransfersMade": 0, "PointsFromCaptain": 4.0, "CaptainChoice": "Haaland, Striker, MCI", "BenchPointsWasted": 7, "TransferCost": 0, "ChipsUsed": null, "TransferSuccess": 0.0, "PointsChange": "Increased", "OverallRank (millions)": 3, "EmotionRating": 2.0, "RankChange": "N", "CaptainSuccess": 8.33, "CaptainName": "Haaland", "CaptainPosition": "Striker", "CaptainClub": "MCI", "PointsChangeDirection": "Increased", "RankChangeDirection": "Negative"}, {"Gameweek": 22, "PointsEarned": 34, "AveragePoints": 40, "TransfersMade": 0, "PointsFromCaptain": 4.0, "CaptainChoice": "Haaland, Striker, MCI", "BenchPointsWasted": 6, "TransferCost": 0, "ChipsUsed": null, "TransferSuccess": 0.0, "PointsChange": "Decreased", "OverallRank (millions)": 3, "EmotionRating": 1.0, "RankChange": "N", "CaptainSuccess": 11.76, "CaptainName": "Haaland", "CaptainPosition": "Striker", "CaptainClub": "MCI", "PointsChangeDirection": "Decreased", "RankChangeDirection": "Negative"}, {"Gameweek": 23, "PointsEarned": 28, "AveragePoints": 44, "TransfersMade": 3, "PointsFromCaptain": 2.0, "CaptainChoice": "Gabriel, Defender, ARS", "BenchPointsWasted": 16, "TransferCost": 0, "ChipsUsed": null, "TransferSuccess": 0.0, "PointsChange": "Decreased", "OverallRank (millions)": 4, "EmotionRating": 1.0, "RankChange": "N", "CaptainSuccess": 7.14, "CaptainName": "Gabriel", "CaptainPosition": "Defender", "CaptainClub": "ARS", "PointsChangeDirection": "Decreased", "RankChangeDirection": "Negative"}, {"Gameweek": 24, "PointsEarned": 62, "AveragePoints": 55, "TransfersMade": 2, "PointsFromCaptain": 16.0, "CaptainChoice": "Enzo, Midfielder, CHE", "BenchPointsWasted": 7, "TransferCost": -4, "ChipsUsed": null, "TransferSuccess": -1.0, "PointsChange": "Increased", "OverallRank (millions)": 4, "EmotionRating": 4.0, "RankChange": "P", "CaptainSuccess": 25.81, "CaptainName": "Enzo", "CaptainPosition": "Midfielder", "CaptainClub": "CHE", "PointsChangeDirection": "Increased", "RankChangeDirection": "Positive"}, {"Gameweek": 25, "PointsEarned": 68, "AveragePoints": 58, "TransfersMade": 4, "PointsFromCaptain": 16.0, "CaptainChoice": "Joao Pedro, Striker, CHE", "BenchPointsWasted": 10, "TransferCost": -12, "ChipsUsed": null, "TransferSuccess": 16.0, "PointsChange": "Increased", "OverallRank (millions)": 4, "EmotionRating": 3.0, "RankChange": "N", "CaptainSuccess": 23.53, "CaptainName": "Joao Pedro", "CaptainPosition": "Striker", "CaptainClub": "CHE", "PointsChangeDirection": "Increased", "RankChangeDirection": "Negative"}, {"Gameweek": 26, "PointsEarned": 78, "AveragePoints": 58, "TransfersMade": 0, "PointsFromCaptain": 42.0, "CaptainChoice": "Rice, Midfielder, ARS", "BenchPointsWasted": 5, "TransferCost": 0, "ChipsUsed": "Triple Captain", "TransferSuccess": 0.0, "PointsChange": "Increased", "OverallRank (millions)": 3, "EmotionRating": 4.0, "RankChange": "P", "CaptainSuccess": 53.85, "CaptainName": "Rice", "CaptainPosition": "Midfielder", "CaptainClub": "ARS", "PointsChangeDirection": "Increased", "RankChangeDirection": "Positive"}, {"Gameweek": 27, "PointsEarned": 51, "AveragePoints": 45, "TransfersMade": 1, "PointsFromCaptain": 6.0, "CaptainChoice": "Palmer, Midfielder, CHE", "BenchPointsWasted": 4, "TransferCost": 0, "ChipsUsed": null, "TransferSuccess": 1.0, "PointsChange": "Decreased", "OverallRank (millions)": 3, "EmotionRating": 2.0, "RankChange": "N", "CaptainSuccess": 11.76, "CaptainName": "Palmer", "CaptainPosition": "Midfielder", "CaptainClub": "CHE", "PointsChangeDirection": "Decreased", "RankChangeDirection": "Negative"}, {"Gameweek": 28, "PointsEarned": 65, "AveragePoints": 53, "TransfersMade": 0, "PointsFromCaptain": 4.0, "CaptainChoice": "Mbeumo, Striker, MUFC", "BenchPointsWasted": 4, "TransferCost": 0, "ChipsUsed": null, "TransferSuccess": 0.0, "PointsChange": "Increased", "OverallRank (millions)": 3, "EmotionRating": 3.0, "RankChange": "P", "CaptainSuccess": 6.15, "CaptainName": "Mbeumo", "CaptainPosition": "Striker", "CaptainClub": "MUFC", "PointsChangeDirection": "Increased", "RankChangeDirection": "Positive"}, {"Gameweek": 29, "PointsEarned": 96, "AveragePoints": 54, "TransfersMade": 0, "PointsFromCaptain": 22.0, "CaptainChoice": "Gabriel, Defender, ARS", "BenchPointsWasted": 9, "TransferCost": 0, "ChipsUsed": null, "TransferSuccess": 0.0, "PointsChange": "Increased", "OverallRank (millions)": 2, "EmotionRating": 5.0, "RankChange": "P", "CaptainSuccess": 22.92, "CaptainName": "Gabriel", "CaptainPosition": "Defender", "CaptainClub": "ARS", "PointsChangeDirection": "Increased", "RankChangeDirection": "Positive"}, {"Gameweek": 30, "PointsEarned": 56, "AveragePoints": 43, "TransfersMade": 3, "PointsFromCaptain": 20.0, "CaptainChoice": "Bruno, Midfielder, MUFC", "BenchPointsWasted": 8, "TransferCost": 0, "ChipsUsed": null, "TransferSuccess": 8.0, "PointsChange": "Decreased", "OverallRank (millions)": 2, "EmotionRating": 3.0, "RankChange": "P", "CaptainSuccess": 35.71, "CaptainName": "Bruno", "CaptainPosition": "Midfielder", "CaptainClub": "MUFC", "PointsChangeDirection": "Decreased", "RankChangeDirection": "Positive"}, {"Gameweek": 31, "PointsEarned": 64, "AveragePoints": 38, "TransfersMade": 0, "PointsFromCaptain": 26.0, "CaptainChoice": "Bruno, Midfielder, MUFC", "BenchPointsWasted": 2, "TransferCost": 0, "ChipsUsed": "Free Hit", "TransferSuccess": 0.0, "PointsChange": "Increased", "OverallRank (millions)": 1, "EmotionRating": 4.0, "RankChange": "P", "CaptainSuccess": 40.63, "CaptainName": "Bruno", "CaptainPosition": "Midfielder", "CaptainClub": "MUFC", "PointsChangeDirection": "Increased", "RankChangeDirection": "Positive"}, {"Gameweek": 32, "PointsEarned": 44, "AveragePoints": 46, "TransfersMade": 0, "PointsFromCaptain": 8.0, "CaptainChoice": "Bruno, Midfielder, MUFC", "BenchPointsWasted": 2, "TransferCost": 0, "ChipsUsed": null, "TransferSuccess": 0.0, "PointsChange": "Decreased", "OverallRank (millions)": 2, "EmotionRating": 2.0, "RankChange": "N", "CaptainSuccess": 18.18, "CaptainName": "Bruno", "CaptainPosition": "Midfielder", "CaptainClub": "MUFC", "PointsChangeDirection": "Decreased", "RankChangeDirection": "Negative"}, {"Gameweek": 33, "PointsEarned": 38, "AveragePoints": 66, "TransfersMade": 0, "PointsFromCaptain": 12.0, "CaptainChoice": "Bruno, Midfielder, MUFC", "BenchPointsWasted": 0, "TransferCost": 0, "ChipsUsed": null, "TransferSuccess": 0.0, "PointsChange": "Decreased", "OverallRank (millions)": 2, "EmotionRating": 1.0, "RankChange": "N", "CaptainSuccess": 31.58, "CaptainName": "Bruno", "CaptainPosition": "Midfielder", "CaptainClub": "MUFC", "PointsChangeDirection": "Decreased", "RankChangeDirection": "Negative"}, {"Gameweek": 34, "PointsEarned": 64, "AveragePoints": 36, "TransfersMade": 4, "PointsFromCaptain": 20.0, "CaptainChoice": "Bowen, Forward, WHFC", "BenchPointsWasted": 0, "TransferCost": 0, "ChipsUsed": null, "TransferSuccess": 27.0, "PointsChange": "Increased", "OverallRank (millions)": 2, "EmotionRating": 3.0, "RankChange": "P", "CaptainSuccess": 31.25, "CaptainName": "Bowen", "CaptainPosition": "Forward", "CaptainClub": "WHFC", "PointsChangeDirection": "Increased", "RankChangeDirection": "Positive"}, {"Gameweek": 35, "PointsEarned": 47, "AveragePoints": 50, "TransfersMade": 0, "PointsFromCaptain": 8.0, "CaptainChoice": "Gibbs-White, Midfielder, NFFC", "BenchPointsWasted": 18, "TransferCost": 0, "ChipsUsed": "Wildcard", "TransferSuccess": 0.0, "PointsChange": "Decreased", "OverallRank (millions)": 2, "EmotionRating": 1.0, "RankChange": "N", "CaptainSuccess": 17.02, "CaptainName": "Gibbs-White", "CaptainPosition": "Midfielder", "CaptainClub": "NFFC", "PointsChangeDirection": "Decreased", "RankChangeDirection": "Negative"}, {"Gameweek": 36, "PointsEarned": 77, "AveragePoints": 65, "TransfersMade": 0, "PointsFromCaptain": 22.0, "CaptainChoice": "Haaland, Striker, MCI", "BenchPointsWasted": 21, "TransferCost": 0, "ChipsUsed": null, "TransferSuccess": 0.0, "PointsChange": "Increased", "OverallRank (millions)": 2, "EmotionRating": 4.0, "RankChange": "P", "CaptainSuccess": 28.57, "CaptainName": "Haaland", "CaptainPosition": "Striker", "CaptainClub": "MCI", "PointsChangeDirection": "Increased", "RankChangeDirection": "Positive"}, {"Gameweek": 37, "PointsEarned": 76, "AveragePoints": 53, "TransfersMade": 3, "PointsFromCaptain": 6.0, "CaptainChoice": "Eze, Midfielder, ARS", "BenchPointsWasted": 0, "TransferCost": -4, "ChipsUsed": "Bench Boost", "TransferSuccess": 6.0, "PointsChange": "Decreased", "OverallRank (millions)": 2, "EmotionRating": 4.0, "RankChange": "P", "CaptainSuccess": 7.89, "CaptainName": "Eze", "CaptainPosition": "Midfielder", "CaptainClub": "ARS", "PointsChangeDirection": "Decreased", "RankChangeDirection": "Positive"}, {"Gameweek": 38, "PointsEarned": 63, "AveragePoints": 41, "TransfersMade": 0, "PointsFromCaptain": 24.0, "CaptainChoice": "Bowen, Forward, WHFC", "BenchPointsWasted": 5, "TransferCost": 0, "ChipsUsed": null, "TransferSuccess": 0.0, "PointsChange": "Decreased", "OverallRank (millions)": 2, "EmotionRating": 3.0, "RankChange": "P", "CaptainSuccess": 38.1, "CaptainName": "Bowen", "CaptainPosition": "Forward", "CaptainClub": "WHFC", "PointsChangeDirection": "Decreased", "RankChangeDirection": "Positive"}];
+
+// ---- derived season summary for header ----
+(function(){
+  const totalPoints = seasonData.reduce((s,d)=>s+d.PointsEarned,0);
+  const rankStart = seasonData[0]["OverallRank (millions)"];
+  const rankEnd = seasonData[seasonData.length-1]["OverallRank (millions)"];
+  const netTransfer = seasonData.reduce((s,d)=>s+d.TransferSuccess+d.TransferCost,0);
+  document.getElementById('subtitle-stats').innerHTML =
+    `38 gameweeks &nbsp;·&nbsp; <b>${totalPoints}</b> total points &nbsp;·&nbsp; rank <b>${rankStart}M → ${rankEnd}M</b> &nbsp;·&nbsp; <b>${netTransfer>=0?'+':''}${netTransfer}</b> net transfer points`;
+})();
+
+// ---- filter buttons ----
+let activeFilter = 'all';
+document.querySelectorAll('.filter-btn').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    activeFilter = btn.dataset.filter;
+  });
+});
+
+// ---- replay ----
+let replayRequested = false;
+document.getElementById('replay-btn').addEventListener('click', ()=>{
+  replayRequested = true;
+});
+
+// ---- tooltip position tracking (raw DOM, independent of p5 canvas coords) ----
+let tooltipClientX = 0, tooltipClientY = 0;
+document.addEventListener('mousemove', (e)=>{
+  tooltipClientX = e.clientX;
+  tooltipClientY = e.clientY;
+});
+
+const reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+const chipColors = {
+  'Wildcard': [167,139,250],
+  'Triple Captain': [244,201,93],
+  'Bench Boost': [94,234,212],
+  'Free Hit': [244,114,182]
+};
+
+let stepSize, marginX, canvasW, canvasH, groundY, riverTop, riverBottom;
+let maxPoints, maxTransfers, maxCaptainPts, bestRankPadded, worstRankPadded;
+let riverPts = [];
+let treeMeta = [];
+let seasonStartFrame = 0;
+let hoveredIndex = null;
+
+let skyTop, skyMid, horizonGlow, turfLight, turfDark, chalkCol;
+let badColor, midColor, greatColor, riverColor, fruitColor, rootPos, rootNeg;
+
+function setup(){
+  const numGW = seasonData.length;
+  stepSize = 44;
+  marginX = 90;
+  canvasW = marginX*2 + stepSize*numGW;
+  canvasH = 720;
+
+  const cnv = createCanvas(canvasW, canvasH);
+  cnv.parent('canvas-wrap');
+
+  groundY = canvasH - 150;
+  riverTop = 170;
+  riverBottom = 310;
+
+  skyTop = color(9,16,28);
+  skyMid = color(26,42,70);
+  horizonGlow = color(240,170,90);
+  turfLight = color(34,70,42);
+  turfDark = color(16,36,22);
+  chalkCol = color(255,255,255,55);
+
+  badColor = color(178,68,60);
+  midColor = color(214,150,60);
+  greatColor = color(70,158,92);
+  riverColor = color(95,205,220);
+  fruitColor = color(224,103,63);
+  rootPos = color(74,222,128);
+  rootNeg = color(248,113,113);
+
+  maxPoints = Math.max(...seasonData.map(d=>d.PointsEarned));
+  maxTransfers = Math.max(...seasonData.map(d=>d.TransfersMade), 1);
+  maxCaptainPts = Math.max(...seasonData.map(d=>d.PointsFromCaptain));
+
+  const ranks = seasonData.map(d=>d["OverallRank (millions)"]);
+  const bestRank = Math.min(...ranks);
+  const worstRank = Math.max(...ranks);
+  const range = Math.max(1, worstRank - bestRank);
+  bestRankPadded = Math.max(1, bestRank - range*0.2);
+  worstRankPadded = worstRank + range*0.2;
+
+  treeMeta = seasonData.map((d,i)=>({
+    fruitOffsets: Array.from({length:8}, ()=>({dx: random(-22,22), dy: random(6,20)})),
+    startFrame: i*4
+  }));
+
+  riverPts = seasonData.map((d,i)=>{
+    const x = marginX + (i+0.5)*stepSize;
+    const y = map(d["OverallRank (millions)"], bestRankPadded, worstRankPadded, riverTop, riverBottom);
+    return {x,y};
+  });
+
+  textFont('IBM Plex Mono');
+  frameRate(60);
+}
+
+function draw(){
+  if(replayRequested){
+    seasonStartFrame = frameCount;
+    replayRequested = false;
+  }
+
+  drawSky();
+  drawFloodlight(28);
+  drawFloodlight(canvasW-28);
+  drawGround();
+  drawGrid();
+  drawRiver();
+
+  for(let i=0;i<seasonData.length;i++){
+    drawTree(i);
+  }
+
+  updateHover();
+  showTooltip();
+}
+
+function drawSky(){
+  noFill();
+  for(let y=0;y<groundY;y+=2){
+    const t = y/groundY;
+    stroke(lerpColor(skyTop, skyMid, t));
+    strokeWeight(2);
+    line(0,y,canvasW,y);
+  }
+  noStroke();
+  for(let r=280;r>0;r-=20){
+    const a = map(r,0,280,55,0);
+    fill(red(horizonGlow),green(horizonGlow),blue(horizonGlow),a);
+    ellipse(canvasW/2, groundY, r*2.2, r*0.55);
+  }
+}
+
+function drawFloodlight(x){
+  stroke(70); strokeWeight(4);
+  line(x, groundY, x, 55);
+  noStroke();
+  for(let r=64;r>0;r-=6){
+    const a = map(r,0,64,80,0);
+    fill(244,220,150,a);
+    ellipse(x,55,r,r);
+  }
+  fill(230,210,160);
+  noStroke();
+  ellipse(x,55,16,9);
+}
+
+function drawGround(){
+  noFill();
+  for(let y=groundY;y<canvasH;y+=2){
+    const t = (y-groundY)/(canvasH-groundY);
+    stroke(lerpColor(turfLight, turfDark, t));
+    strokeWeight(2);
+    line(0,y,canvasW,y);
+  }
+  noStroke();
+  stroke(chalkCol); strokeWeight(2); noFill();
+  ellipse(canvasW/2, groundY+36, 150,54);
+  line(canvasW/2, groundY, canvasW/2, canvasH);
+  noStroke();
+}
+
+function drawGrid(){
+  stroke(255,255,255,10);
+  strokeWeight(1);
+  for(let i=0;i<seasonData.length;i++){
+    const x = marginX + (i+0.5)*stepSize;
+    line(x, riverTop-20, x, groundY);
+  }
+  noStroke();
+}
+
+function drawRiver(){
+  noFill();
+  for(let w=14;w>=2;w-=3){
+    stroke(red(riverColor),green(riverColor),blue(riverColor), map(w,2,14,110,14));
+    strokeWeight(w);
+    beginShape();
+    riverPts.forEach(p=>vertex(p.x,p.y));
+    endShape();
+  }
+
+  noStroke();
+  for(let i=0;i<riverPts.length;i++){
+    const p = riverPts[i];
+    fill(riverColor);
+    ellipse(p.x,p.y,7,7);
+
+    if(seasonData[i].ChipsUsed){
+      const cc = chipColors[seasonData[i].ChipsUsed] || [255,255,255];
+      fill(cc[0],cc[1],cc[2],170);
+      const spin = reduceMotion ? 0 : frameCount*0.02;
+      for(let k=0;k<5;k++){
+        const a = spin + k*(TWO_PI/5);
+        ellipse(p.x+cos(a)*13, p.y+sin(a)*13, 4,4);
+      }
+    }
+  }
+
+  if(!reduceMotion){
+    const t = (frameCount%420)/420;
+    const segF = t*(riverPts.length-1);
+    const idx = Math.floor(segF);
+    const localT = segF-idx;
+    if(idx < riverPts.length-1){
+      const a = riverPts[idx], b = riverPts[idx+1];
+      const px = lerp(a.x,b.x,localT), py = lerp(a.y,b.y,localT);
+      noStroke();
+      for(let r=18;r>0;r-=3){
+        fill(255,255,255, map(r,0,18,160,0));
+        ellipse(px,py,r,r);
+      }
+    }
+  }
+}
+
+function getGrowth(i){
+  const start = seasonStartFrame + treeMeta[i].startFrame;
+  const elapsed = frameCount - start;
+  return constrain(elapsed/40, 0, 1);
+}
+
+function matchesFilter(d){
+  switch(activeFilter){
+    case 'chips': return !!d.ChipsUsed;
+    case 'hits': return d.TransferCost < 0;
+    case 'highmood': return d.EmotionRating >= 4;
+    case 'lowmood': return d.EmotionRating <= 2;
+    default: return true;
+  }
+}
+
+function drawTree(i){
+  const d = seasonData[i];
+  const x = marginX + (i+0.5)*stepSize;
+  const growth = getGrowth(i);
+  if(growth<=0) return;
+
+  const isHover = hoveredIndex === i;
+  const dimmed = !matchesFilter(d);
+  const alphaMul = dimmed ? 0.22 : 1;
+
+  const trunkH = map(d.PointsEarned, 0, maxPoints, 20, 250) * growth;
+  const trunkW = 7 + (d.TransfersMade/maxTransfers)*13;
+  const canopySize = map(d.PointsFromCaptain, 0, maxCaptainPts, 26, 62) * growth;
+  const sway = reduceMotion ? 0 : sin(frameCount*0.03 + i)*3*growth;
+
+  // root glow (transfer success)
+  if(d.TransferSuccess !== 0){
+    const rc = d.TransferSuccess > 0 ? rootPos : rootNeg;
+    noStroke();
+    fill(red(rc),green(rc),blue(rc), 65*alphaMul*growth);
+    ellipse(x, groundY+5, 36+Math.abs(d.TransferSuccess)*1.4, 13);
+  }
+
+  // chip halo
+  if(d.ChipsUsed){
+    const cc = chipColors[d.ChipsUsed] || [255,255,255];
+    noStroke();
+    for(let r=44;r>0;r-=6){
+      fill(cc[0],cc[1],cc[2], map(r,0,44,85,0)*alphaMul*growth);
+      ellipse(x, groundY-trunkH*0.5, r+trunkW, (r+trunkW)*1.15);
+    }
+  }
+
+  // hover ring
+  if(isHover){
+    noFill(); stroke(255,255,255,190); strokeWeight(2);
+    ellipse(x, groundY-trunkH, canopySize*1.7, canopySize*1.9);
+    noStroke();
+  }
+
+  // trunk
+  noStroke();
+  fill(74,52,38, 255*alphaMul);
+  rectMode(CENTER);
+  rect(x, groundY-trunkH/2, trunkW, trunkH, 3);
+
+  // canopy
+  const t = constrain((d.EmotionRating-1)/4, 0, 1);
+  const cCol = t < 0.5 ? lerpColor(badColor, midColor, t*2) : lerpColor(midColor, greatColor, (t-0.5)*2);
+  fill(red(cCol),green(cCol),blue(cCol), 255*alphaMul);
+  ellipse(x+sway, groundY-trunkH, canopySize, canopySize*1.22);
+
+  // points label
+  if(growth > 0.55){
+    fill(255,255,255, 235*alphaMul);
+    textAlign(CENTER,CENTER);
+    textSize(11);
+    text(d.PointsEarned, x+sway, groundY-trunkH);
+  }
+
+  // fallen fruit
+  if(d.BenchPointsWasted > 0){
+    fill(red(fruitColor),green(fruitColor),blue(fruitColor), 210*alphaMul*growth);
+    const n = Math.min(8, Math.floor(d.BenchPointsWasted/3)+2);
+    for(let k=0;k<n;k++){
+      const off = treeMeta[i].fruitOffsets[k % treeMeta[i].fruitOffsets.length];
+      ellipse(x+off.dx, groundY+off.dy, 5,5);
+    }
+  }
+
+  // rank change arrow
+  if(d.RankChangeDirection){
+    noStroke();
+    const ay = groundY - trunkH - canopySize*0.85;
+    if(d.RankChangeDirection === 'Positive'){
+      fill(74,222,128, 230*alphaMul);
+      triangle(x-6,ay+6, x+6,ay+6, x,ay-6);
+    } else {
+      fill(248,113,113, 230*alphaMul);
+      triangle(x-6,ay-6, x+6,ay-6, x,ay+6);
+    }
+  }
+
+  // GW label
+  fill(225,225,220, 220*alphaMul);
+  textAlign(CENTER,TOP);
+  textSize(11);
+  text('GW'+d.Gameweek, x, groundY+8);
+}
+
+function updateHover(){
+  hoveredIndex = null;
+  for(let i=0;i<seasonData.length;i++){
+    const x = marginX + (i+0.5)*stepSize;
+    if(mouseX > x-stepSize/2 && mouseX < x+stepSize/2 && mouseY > riverTop-20 && mouseY < groundY+40){
+      hoveredIndex = i;
+      break;
+    }
+  }
+}
+
+function showTooltip(){
+  const el = document.getElementById('tooltip');
+  if(hoveredIndex === null){
+    el.classList.add('hidden');
+    return;
+  }
+  const d = seasonData[hoveredIndex];
+  el.classList.remove('hidden');
+  el.style.left = (tooltipClientX+18)+'px';
+  el.style.top = (tooltipClientY+18)+'px';
+  el.innerHTML = `
+    <div class="tt-gw">Gameweek ${d.Gameweek}</div>
+    <div class="tt-row"><span>Points</span><b>${d.PointsEarned}</b></div>
+    <div class="tt-row"><span>League avg</span><b>${d.AveragePoints}</b></div>
+    <div class="tt-row"><span>Captain</span><b>${d.CaptainName}</b></div>
+    <div class="tt-row"><span></span><span class="tt-sub">${d.CaptainPosition}, ${d.CaptainClub} — ${d.PointsFromCaptain} pts (${d.CaptainSuccess}% of squad)</span></div>
+    <div class="tt-row"><span>Transfers</span><b>${d.TransfersMade}</b></div>
+    <div class="tt-row"><span>Transfer cost / net</span><b>${d.TransferCost} / ${d.TransferSuccess}</b></div>
+    <div class="tt-row"><span>Bench wasted</span><b>${d.BenchPointsWasted}</b></div>
+    <div class="tt-row"><span>Mood</span><b>${d.EmotionRating}/5</b></div>
+    ${d.ChipsUsed ? `<div class="tt-row chip"><span>Chip</span><b>${d.ChipsUsed}</b></div>` : ''}
+    <div class="tt-row"><span>Rank</span><b>${d["OverallRank (millions)"]}M</b></div>
+  `;
+}
+</script>
+</body>
+</html>
